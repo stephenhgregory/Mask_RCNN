@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib import patches,  lines
 from matplotlib.patches import Polygon
 import IPython.display
+from PIL import Image, ImageDraw, ImageFont
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../")
@@ -498,3 +499,111 @@ def display_weight_stats(model):
                 "{:+9.4f}".format(w.std()),
             ])
     display_table(table)
+
+
+def save_image(image, image_name, boxes, masks, class_ids, scores, class_names, filter_class_names=None,
+               scores_thresh=0.1, save_dir=None, mode=0):
+    '''
+
+    :param image:                   image array
+    :param image_name:              image name
+    :param boxes:                   [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates
+    :param masks:                   [num_instances, height, width]
+    :param class_ids:               [num_instances]
+    :param scores:                  confidence scores for each box
+    :param class_names:             list of class names of the dataset
+    :param filter_class_names:      (optional) list of class names we want to draw
+    :param scores_thresh:           (optional) threshold of confidence scores
+    :param save_dir:                (optional) the path to store image
+    :param mode:                    (optional) select the result which you want
+                                    mode = 0, save image with bbox, class_name, score, and mask
+                                    mode = 1, save image with bbox, class_name, and score
+                                    mode = 2, save image with class_name, score, and mask
+                                    mode = 3, save mask with black background
+    '''
+
+    mode_list = [0, 1, 2, 3]
+    assert mode in mode_list, "mode's value should be in mode_list %s" % str(mode_list)
+
+    if save_dir is None:
+        save_dir = os.path.join(os.getcwd(), "output")
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+    useful_mask_indices = []
+
+    N = boxes.shape[0] # N = number of boxes
+    if not N:
+        print("\n*** No instances in image %s to draw *** \n" % (image_name))
+        return
+    else:
+        assert boxes.shape[0] == masks.shape[-1] == class_ids.shape[0] # should "masks.shape[-1]" not simply be "masks.shape[0]"?
+
+    for i in range(N):
+        # filter
+        class_id = class_ids[i]
+        score = scores[i] if scores is not None else None
+        if score is None or score < scores_thresh:
+            continue
+
+        label = class_names[class_id]
+        if (filter_class_names is not None) and (label not in filter_class_names):
+            continue
+
+        if not np.any(boxes[i]):
+            # Skip this instance, it has no bbox. Likely lost in image cropping.
+            continue
+
+        useful_mask_indices.append(i)
+
+    if len(useful_mask_indices) == 0:
+        print("\n*** No instances in image %s to draw *** \n" % (image_name))
+        return
+
+    colors = random_colors(len(useful_mask_indices))
+
+    if mode != 3:
+        masked_image = image.astype(np.uint8).copy()
+    else:
+        masked_image = np.zeros(image.shape).astype(np.uint8)
+
+    if mode != 1:
+        for index, value in enumerate(useful_mask_indices):
+            masked_image = apply_mask(masked_image, masks[:, :, value], colors[index])
+
+    masked_image = Image.fromarray(masked_image)
+
+    if mode == 3:
+        masked_image.save(os.path.join(save_dir, '%s.jpg' % (image_name)))
+        return
+
+    draw = ImageDraw.Draw(masked_image)
+    colors = np.array(colors).astype(int) * 255 # What does this do?
+
+    box_string_list = []
+
+    for index, value in enumerate(useful_mask_indices):
+        class_id = class_ids[value]
+        score = scores[value]
+        label = class_names[class_id]
+
+        # Get bounding box coordinates
+        y1, x1, y2, x2 = boxes[value]
+        # calculate width and height of the box
+        width, height = x2 - x1, y2 - y1
+
+        box_string_list.append("y1: " + str(y1) + ", x1: " + str(x1) + ", y2: " + str(y2) + ", x2: " + str(x2) + ", width = " + str(width) + "px, height = " + str(height) + "px" + "\n")
+
+        if mode != 2:
+            color = (255,0,0)
+            draw.rectangle((x1, y1, x2, y2), outline=color, width=6)
+
+        # Label
+        # font = ImageFont.truetype('C:/Users/yugan/Documents/Unreal Projects/CapstoneDesign_1/Saved/StagedBuilds/WindowsNoEditor/Engine/Content/Slate/Fonts/Roboto-Regular.ttf', 15)
+        # draw.text((x1, y1), "%s %f" % (label, score), (255, 255, 255), font)
+
+    masked_image.save(os.path.join(save_dir, "%s.jpg" % (image_name)))
+    box_file = open(os.path.join(save_dir, "boxes", "%s.txt" % (image_name)), mode="w+")
+    box_file.writelines(box_string_list)
+    box_file.close()
+

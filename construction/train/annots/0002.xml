@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>0002.JPG</filename>
+	<path>C:\Users\yugan\Desktop\Mask_RCNN\construction\train\images\0002.JPG</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>4000</width>
+		<height>3000</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>crane</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>760</xmin>
+			<ymin>1</ymin>
+			<xmax>1645</xmax>
+			<ymax>1724</ymax>
+		</bndbox>
+	</object>
+</annotation>

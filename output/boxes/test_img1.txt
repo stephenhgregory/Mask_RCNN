@@ -1,0 +1,4 @@
+y1: 637, x1: 2285, y2: 943, x2: 2753, width = 468px, height = 306px
+y1: 915, x1: 2581, y2: 1119, x2: 3164, width = 583px, height = 204px
+y1: 560, x1: 2642, y2: 1302, x2: 2929, width = 287px, height = 742px
+y1: 607, x1: 2327, y2: 1396, x2: 3305, width = 978px, height = 789px
